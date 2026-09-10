@@ -666,6 +666,32 @@ body.has-entered .entry {
   font-size: 0.76rem;
 }
 
+.track-byline {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+#trackArtist {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.soundcloud-source {
+  flex: none;
+  color: #ff8a45;
+  font-size: 0.62rem;
+  font-weight: 780;
+  text-decoration: none;
+}
+
+.soundcloud-source:hover {
+  color: #ffb183;
+}
+
 .track-kicker {
   margin-bottom: 4px;
   color: var(--accent);
@@ -745,6 +771,17 @@ body.has-entered .entry {
   text-overflow: ellipsis;
   white-space: nowrap;
   text-shadow: 0 0 16px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.soundcloud-engine {
+  position: fixed;
+  left: -10px;
+  bottom: -10px;
+  width: 1px;
+  height: 1px;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .profile-meta {

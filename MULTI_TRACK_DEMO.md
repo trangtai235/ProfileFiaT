@@ -2,14 +2,14 @@
 
 Nhánh `demo/multi-track` giữ nguyên trang công khai chỉ để nghe nhạc và xem lyric. Người xem có thể chuyển bài trước/sau nhưng không thể sửa nguồn nhạc, thời gian bắt đầu hoặc kết thúc.
 
-## Thêm một bài
+## Thêm một bài SoundCloud
 
-1. Chép file nhạc vào thư mục `assets/`.
-2. Mở `config.js` và thêm một phần tử vào `audio.tracks`:
+Mở `config.js` và thêm một phần tử vào `audio.tracks`:
 
 ```js
 {
-  src: "assets/ten-bai.mp3",
+  provider: "soundcloud",
+  url: "https://soundcloud.com/ten-nguoi-dang/ten-bai",
   title: "Tên bài",
   artist: "Tên ca sĩ",
   startAt: 30,
@@ -22,7 +22,9 @@ Nhánh `demo/multi-track` giữ nguyên trang công khai chỉ để nghe nhạc
 }
 ```
 
-`startAt`, `endAt` và `lyrics[].time` đều tính bằng giây trên file nhạc gốc. Đặt `endAt: null` nếu muốn phát đến hết file.
+`startAt`, `endAt` và `lyrics[].time` đều tính bằng giây trên toàn bộ bài SoundCloud. Đặt `endAt: null` nếu muốn phát đến hết bài.
+
+Player vẫn hỗ trợ file MP3: bỏ `provider` và `url`, sau đó dùng `src: "assets/ten-bai.mp3"`.
 
 ## Cài đặt playlist
 

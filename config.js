@@ -29,11 +29,12 @@ window.PROFILE_CONFIG = {
     loopPlaylist: true, // Hết bài cuối sẽ quay lại bài đầu
 
     // Chỉ tài khoản có quyền ghi repository mới chỉnh được danh sách này.
-    // Mỗi bài có thể dùng file MP3 và mốc thời gian riêng.
-    // Demo đang chia một file có sẵn thành 3 mục; hãy thay src bằng file nhạc khác khi cần.
+    // Dán link dạng https://soundcloud.com/ten-nguoi-dang/ten-bai vào url.
+    // Demo đang chia một bài SoundCloud thành 3 mục để thử chuyển đoạn/bài.
     tracks: [
       {
-        src: "assets/12345.mp3",
+        provider: "soundcloud",
+        url: "https://soundcloud.com/tr-ng-giang-nh/12345timem",
         title: "12345 — Phần 1",
         artist: "GAZ",
         startAt: 80,
@@ -60,7 +61,8 @@ window.PROFILE_CONFIG = {
         ],
       },
       {
-        src: "assets/12345.mp3",
+        provider: "soundcloud",
+        url: "https://soundcloud.com/tr-ng-giang-nh/12345timem",
         title: "12345 — Phần 2",
         artist: "GAZ",
         startAt: 120,
@@ -91,7 +93,8 @@ window.PROFILE_CONFIG = {
         ],
       },
       {
-        src: "assets/12345.mp3",
+        provider: "soundcloud",
+        url: "https://soundcloud.com/tr-ng-giang-nh/12345timem",
         title: "12345 — Phần 3",
         artist: "GAZ",
         startAt: 159.5,

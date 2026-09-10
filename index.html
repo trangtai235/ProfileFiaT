@@ -11,6 +11,7 @@
     <title>My Profile</title>
     <link rel="stylesheet" href="styles.css" />
     <script src="config.js"></script>
+    <script src="https://w.soundcloud.com/player/api.js" defer></script>
     <script src="script.js" defer></script>
   </head>
   <body class="is-locked">
@@ -101,7 +102,17 @@
           <div class="track-copy">
             <span class="track-kicker">NOW PLAYING</span>
             <strong id="trackTitle">Thêm file music.mp3</strong>
-            <span id="trackArtist">Nhạc nền của bạn</span>
+            <span class="track-byline">
+              <span id="trackArtist">Nhạc nền của bạn</span>
+              <a
+                class="soundcloud-source"
+                id="soundcloudSource"
+                href="#"
+                target="_blank"
+                rel="noopener noreferrer"
+                hidden
+              >SoundCloud ↗</a>
+            </span>
           </div>
           <div class="track-switcher" aria-label="Chọn bài hát">
             <button id="previousTrack" type="button" aria-label="Phát bài trước">‹</button>
@@ -143,6 +154,12 @@
     <div class="cursor-dot" id="cursorDot" aria-hidden="true"></div>
     <div class="cursor-ring" id="cursorRing" aria-hidden="true"></div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <iframe
+      class="soundcloud-engine"
+      id="soundcloudPlayer"
+      title="Trình phát SoundCloud"
+      allow="autoplay"
+    ></iframe>
     <audio id="audio" preload="metadata"></audio>
   </body>
 </html>

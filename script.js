@@ -6,6 +6,7 @@
   const root = document.documentElement;
   const body = document.body;
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let musicController = null;
 
   const elements = {
     entry: $("#entryScreen"),
@@ -30,6 +31,8 @@
     duration: $("#duration"),
     trackTitle: $("#trackTitle"),
     trackArtist: $("#trackArtist"),
+    soundcloudPlayer: $("#soundcloudPlayer"),
+    soundcloudSource: $("#soundcloudSource"),
     previousTrack: $("#previousTrack"),
     nextTrack: $("#nextTrack"),
     trackPosition: $("#trackPosition"),
@@ -204,18 +207,30 @@
     const configuredTracks = Array.isArray(audioConfig.tracks) && audioConfig.tracks.length
       ? audioConfig.tracks
       : [legacyTrack];
+    const isSoundCloudUrl = (value) => {
+      try {
+        const hostname = new URL(value).hostname.toLowerCase();
+        return hostname === "soundcloud.com" || hostname.endsWith(".soundcloud.com");
+      } catch {
+        return false;
+      }
+    };
     const tracks = configuredTracks
       .map((track, index) => {
-        const src = safeUrl(track?.src);
-        if (!src) return null;
+        const source = safeUrl(track?.url || track?.src);
+        if (!source) return null;
 
         const startAt = Number(track?.startAt);
         const endAt = track?.endAt === null || track?.endAt === "" || track?.endAt === undefined
           ? null
           : Number(track.endAt);
+        const provider = track?.provider === "soundcloud" || isSoundCloudUrl(source)
+          ? "soundcloud"
+          : "audio";
 
         return {
-          src,
+          source,
+          provider,
           title: safeText(track?.title, `Bài hát ${index + 1}`),
           artist: safeText(track?.artist, "Unknown artist"),
           startAt: Number.isFinite(startAt) && startAt >= 0 ? startAt : 0,
@@ -249,8 +264,11 @@
     let activeLyricIndex = -1;
     let segmentStart = 0;
     let segmentEnd = Infinity;
+    let playbackPosition = 0;
     let playAfterLoad = false;
     let isChangingTrack = false;
+    let isPlaying = false;
+    let soundCloudWidget = null;
 
     elements.playButton.disabled = !hasAudio;
     elements.previousTrack.disabled = tracks.length <= 1;
@@ -262,26 +280,32 @@
       elements.trackArtist.textContent = "Mở config.js để kích hoạt";
       elements.trackPosition.textContent = "0 / 0";
       elements.currentLyric.textContent = "Chưa có lời bài hát.";
+      musicController = { available: false };
       return;
     }
 
     elements.audio.volume = Number.isFinite(volume) ? Math.min(1, Math.max(0, volume)) : 0.55;
 
-    const updateProgress = () => {
+    const setPlaying = (playing) => {
+      isPlaying = Boolean(playing);
+      syncAudioButtons(isPlaying);
+    };
+
+    const updateProgress = (position = playbackPosition) => {
       const segmentDuration = segmentEnd - segmentStart;
       const ratio = Number.isFinite(segmentDuration) && segmentDuration > 0
-        ? ((elements.audio.currentTime - segmentStart) / segmentDuration) * 100
+        ? ((position - segmentStart) / segmentDuration) * 100
         : 0;
       const safeRatio = Math.min(100, Math.max(0, ratio));
       elements.progress.setAttribute("aria-valuenow", String(Math.round(safeRatio)));
       elements.progress.style.setProperty("--progress", `${safeRatio}%`);
-      elements.currentTime.textContent = formatTime(elements.audio.currentTime);
+      elements.currentTime.textContent = formatTime(position);
     };
 
-    const updateLyrics = () => {
+    const updateLyrics = (position = playbackPosition) => {
       let nextIndex = -1;
       for (let index = 0; index < activeLyrics.length; index += 1) {
-        if (activeLyrics[index].time > elements.audio.currentTime) break;
+        if (activeLyrics[index].time > position) break;
         nextIndex = index;
       }
       if (nextIndex === activeLyricIndex) return;
@@ -302,37 +326,39 @@
       }
     };
 
-    const loadTrack = (index, shouldPlay = false) => {
-      const normalizedIndex = (index + tracks.length) % tracks.length;
-      activeTrackIndex = normalizedIndex;
-      activeTrack = tracks[activeTrackIndex];
-      activeLyrics = activeTrack.lyrics;
-      activeLyricIndex = -1;
-      segmentStart = activeTrack.startAt;
-      segmentEnd = Infinity;
-      playAfterLoad = shouldPlay;
-      isChangingTrack = true;
-
-      elements.audio.pause();
-      elements.trackTitle.textContent = activeTrack.title;
-      elements.trackArtist.textContent = activeTrack.artist;
-      elements.trackPosition.textContent = `${activeTrackIndex + 1} / ${tracks.length}`;
+    const configureSegment = (duration) => {
+      segmentStart = Math.min(activeTrack.startAt, Math.max(0, duration - 0.01));
+      segmentEnd = activeTrack.endAt !== null && activeTrack.endAt > segmentStart
+        ? Math.min(activeTrack.endAt, duration)
+        : duration;
+      playbackPosition = segmentStart;
       elements.currentTime.textContent = formatTime(segmentStart);
-      elements.duration.textContent = activeTrack.endAt === null ? "0:00" : formatTime(activeTrack.endAt);
-      elements.currentLyric.textContent = activeLyrics.length ? "♪" : "Chưa có lời bài hát.";
-      elements.playButton.disabled = false;
-      elements.progress.setAttribute("aria-valuenow", "0");
-      elements.progress.style.setProperty("--progress", "0%");
-      elements.audio.src = activeTrack.src;
-      elements.audio.load();
+      elements.duration.textContent = formatTime(segmentEnd);
+      updateProgress();
+      updateLyrics();
     };
+
+    const pausePlayers = () => {
+      elements.audio.pause();
+      if (soundCloudWidget) soundCloudWidget.pause();
+      setPlaying(false);
+    };
+
+    let loadTrack;
 
     const finishTrack = () => {
       if (isChangingTrack || !activeTrack) return;
 
       if (activeTrack.loopSegment) {
-        elements.audio.currentTime = segmentStart;
-        elements.audio.play().catch(syncAudioButtons);
+        playbackPosition = segmentStart;
+        if (activeTrack.provider === "soundcloud") {
+          soundCloudWidget.seekTo(segmentStart * 1000);
+          soundCloudWidget.play();
+        } else {
+          elements.audio.currentTime = segmentStart;
+          elements.audio.play().catch(() => setPlaying(false));
+        }
+        setPlaying(true);
         return;
       }
 
@@ -342,31 +368,166 @@
         return;
       }
 
-      elements.audio.pause();
-      elements.audio.currentTime = segmentEnd;
+      pausePlayers();
+      playbackPosition = segmentEnd;
+      if (activeTrack.provider === "soundcloud") {
+        soundCloudWidget.seekTo(segmentEnd * 1000);
+      } else {
+        elements.audio.currentTime = segmentEnd;
+      }
       updateProgress();
-      syncAudioButtons();
+    };
+
+    const handleSoundCloudReady = () => {
+      if (!soundCloudWidget || activeTrack?.provider !== "soundcloud") return;
+
+      soundCloudWidget.getDuration((durationMs) => {
+        if (activeTrack?.provider !== "soundcloud") return;
+        const duration = Number(durationMs) / 1000;
+        if (!Number.isFinite(duration) || duration <= 0) {
+          isChangingTrack = false;
+          showToast("Không đọc được thời lượng bài SoundCloud.");
+          return;
+        }
+
+        configureSegment(duration);
+        soundCloudWidget.seekTo(segmentStart * 1000);
+        isChangingTrack = false;
+
+        if (playAfterLoad) {
+          playAfterLoad = false;
+          soundCloudWidget.play();
+        }
+      });
+    };
+
+    const initializeSoundCloud = () => {
+      if (!window.SC?.Widget) {
+        isChangingTrack = false;
+        playAfterLoad = false;
+        elements.playButton.disabled = true;
+        showToast("Không tải được trình phát SoundCloud.");
+        return;
+      }
+
+      const widgetOptions = {
+        auto_play: false,
+        buying: false,
+        sharing: false,
+        download: false,
+        show_artwork: false,
+        show_playcount: false,
+        show_user: false,
+        callback: handleSoundCloudReady
+      };
+
+      if (!soundCloudWidget) {
+        const query = new URLSearchParams({
+          url: activeTrack.source,
+          auto_play: "false",
+          buying: "false",
+          sharing: "false",
+          download: "false",
+          show_artwork: "false",
+          show_playcount: "false",
+          show_user: "false"
+        });
+        elements.soundcloudPlayer.src = `https://w.soundcloud.com/player/?${query}`;
+        soundCloudWidget = window.SC.Widget(elements.soundcloudPlayer);
+        const events = window.SC.Widget.Events;
+
+        soundCloudWidget.bind(events.READY, handleSoundCloudReady);
+        soundCloudWidget.bind(events.PLAY_PROGRESS, (event) => {
+          if (activeTrack?.provider !== "soundcloud" || isChangingTrack) return;
+          playbackPosition = Number(event?.currentPosition) / 1000;
+          if (!Number.isFinite(playbackPosition)) return;
+          if (playbackPosition + 0.25 < segmentStart) {
+            soundCloudWidget.seekTo(segmentStart * 1000);
+            return;
+          }
+          if (playbackPosition >= segmentEnd) {
+            finishTrack();
+            return;
+          }
+          updateProgress();
+          updateLyrics();
+        });
+        soundCloudWidget.bind(events.PLAY, () => {
+          if (activeTrack?.provider !== "soundcloud") return;
+          if (playbackPosition + 0.25 < segmentStart || playbackPosition >= segmentEnd) {
+            soundCloudWidget.seekTo(segmentStart * 1000);
+          }
+          setPlaying(true);
+        });
+        soundCloudWidget.bind(events.PAUSE, () => {
+          if (activeTrack?.provider === "soundcloud" && !isChangingTrack) setPlaying(false);
+        });
+        soundCloudWidget.bind(events.FINISH, finishTrack);
+        if (events.ERROR) {
+          soundCloudWidget.bind(events.ERROR, () => {
+            if (activeTrack?.provider !== "soundcloud") return;
+            isChangingTrack = false;
+            playAfterLoad = false;
+            setPlaying(false);
+            showToast(`Không phát được ${activeTrack.title}.`);
+          });
+        }
+        return;
+      }
+
+      soundCloudWidget.load(activeTrack.source, widgetOptions);
+    };
+
+    loadTrack = (index, shouldPlay = false) => {
+      const normalizedIndex = (index + tracks.length) % tracks.length;
+      pausePlayers();
+      activeTrackIndex = normalizedIndex;
+      activeTrack = tracks[activeTrackIndex];
+      activeLyrics = activeTrack.lyrics;
+      activeLyricIndex = -1;
+      segmentStart = activeTrack.startAt;
+      segmentEnd = Infinity;
+      playbackPosition = segmentStart;
+      playAfterLoad = shouldPlay;
+      isChangingTrack = true;
+
+      elements.trackTitle.textContent = activeTrack.title;
+      elements.trackArtist.textContent = activeTrack.artist;
+      elements.trackPosition.textContent = `${activeTrackIndex + 1} / ${tracks.length}`;
+      elements.currentTime.textContent = formatTime(segmentStart);
+      elements.duration.textContent = activeTrack.endAt === null ? "0:00" : formatTime(activeTrack.endAt);
+      elements.currentLyric.textContent = activeLyrics.length ? "♪" : "Chưa có lời bài hát.";
+      elements.playButton.disabled = false;
+      elements.soundcloudSource.hidden = activeTrack.provider !== "soundcloud";
+      elements.soundcloudSource.href = activeTrack.provider === "soundcloud" ? activeTrack.source : "#";
+      elements.progress.setAttribute("aria-valuenow", "0");
+      elements.progress.style.setProperty("--progress", "0%");
+
+      if (activeTrack.provider === "soundcloud") {
+        elements.audio.removeAttribute("src");
+        elements.audio.load();
+        initializeSoundCloud();
+      } else {
+        elements.audio.src = activeTrack.source;
+        elements.audio.load();
+      }
     };
 
     elements.audio.addEventListener("loadedmetadata", () => {
-      segmentStart = Math.min(activeTrack.startAt, Math.max(0, elements.audio.duration - 0.01));
-      segmentEnd = activeTrack.endAt !== null && activeTrack.endAt > segmentStart
-        ? Math.min(activeTrack.endAt, elements.audio.duration)
-        : elements.audio.duration;
+      if (activeTrack?.provider !== "audio") return;
+      configureSegment(elements.audio.duration);
       elements.audio.currentTime = segmentStart;
-      elements.currentTime.textContent = formatTime(segmentStart);
-      elements.duration.textContent = formatTime(segmentEnd);
       isChangingTrack = false;
-      updateLyrics();
 
       if (playAfterLoad) {
         playAfterLoad = false;
-        elements.audio.play().catch(syncAudioButtons);
+        elements.audio.play().catch(() => setPlaying(false));
       }
     });
 
     elements.audio.addEventListener("timeupdate", () => {
-      if (isChangingTrack) return;
+      if (activeTrack?.provider !== "audio" || isChangingTrack) return;
+      playbackPosition = elements.audio.currentTime;
       if (elements.audio.currentTime + 0.25 < segmentStart) {
         elements.audio.currentTime = segmentStart;
         return;
@@ -380,46 +541,80 @@
     });
 
     elements.audio.addEventListener("play", () => {
+      if (activeTrack?.provider !== "audio") return;
       if (elements.audio.currentTime < segmentStart || elements.audio.currentTime >= segmentEnd) {
         elements.audio.currentTime = segmentStart;
       }
-      syncAudioButtons();
+      setPlaying(true);
     });
-    elements.audio.addEventListener("pause", syncAudioButtons);
-    elements.audio.addEventListener("ended", finishTrack);
+    elements.audio.addEventListener("pause", () => {
+      if (activeTrack?.provider === "audio" && !isChangingTrack) setPlaying(false);
+    });
+    elements.audio.addEventListener("ended", () => {
+      if (activeTrack?.provider === "audio") finishTrack();
+    });
     elements.audio.addEventListener("error", () => {
+      if (activeTrack?.provider !== "audio") return;
       isChangingTrack = false;
       playAfterLoad = false;
       elements.playButton.disabled = true;
+      setPlaying(false);
       showToast(`Không đọc được ${activeTrack?.title || "file nhạc"}.`);
     });
 
     elements.previousTrack.addEventListener("click", () => {
-      loadTrack(activeTrackIndex - 1, !elements.audio.paused);
+      loadTrack(activeTrackIndex - 1, isPlaying);
     });
     elements.nextTrack.addEventListener("click", () => {
-      loadTrack(activeTrackIndex + 1, !elements.audio.paused);
+      loadTrack(activeTrackIndex + 1, isPlaying);
     });
+
+    musicController = {
+      available: true,
+      async play() {
+        if (isChangingTrack) {
+          playAfterLoad = true;
+          return;
+        }
+        if (activeTrack.provider === "soundcloud") {
+          if (playbackPosition + 0.25 < segmentStart || playbackPosition >= segmentEnd) {
+            soundCloudWidget.seekTo(segmentStart * 1000);
+          }
+          soundCloudWidget.play();
+          return;
+        }
+        if (elements.audio.currentTime < segmentStart || elements.audio.currentTime >= segmentEnd) {
+          elements.audio.currentTime = segmentStart;
+        }
+        await elements.audio.play();
+      },
+      pause() {
+        pausePlayers();
+      },
+      async toggle() {
+        if (isPlaying) this.pause();
+        else await this.play();
+      }
+    };
 
     loadTrack(activeTrackIndex);
   }
 
   async function toggleAudio() {
-    if (!elements.audio.src || elements.playButton.disabled) {
-      showToast("Hãy thêm assets/music.mp3 rồi khai báo trong config.js.");
+    if (!musicController?.available || elements.playButton.disabled) {
+      showToast("Hãy thêm link SoundCloud hoặc file nhạc trong config.js.");
       return;
     }
 
     try {
-      if (elements.audio.paused) await elements.audio.play();
-      else elements.audio.pause();
+      await musicController.toggle();
     } catch {
       showToast("Trình duyệt chưa cho phép phát âm thanh.");
     }
   }
 
-  function syncAudioButtons() {
-    const playing = !elements.audio.paused;
+  function syncAudioButtons(playingOverride) {
+    const playing = typeof playingOverride === "boolean" ? playingOverride : !elements.audio.paused;
     elements.playButton.classList.toggle("is-playing", playing);
     elements.playButton.setAttribute("aria-label", playing ? "Tạm dừng nhạc" : "Phát nhạc");
     elements.soundToggle.classList.toggle("is-muted", !playing);
@@ -629,11 +824,11 @@
   elements.entry.addEventListener("click", async () => {
     body.classList.add("has-entered");
     body.classList.remove("is-locked");
-    if (elements.audio.src && !elements.playButton.disabled) {
+    if (musicController?.available && !elements.playButton.disabled) {
       try {
-        await elements.audio.play();
+        await musicController.play();
       } catch {
-        syncAudioButtons();
+        syncAudioButtons(false);
       }
     }
   });
