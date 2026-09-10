@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Trang profile cá nhân với nền điện ảnh, hiệu ứng kính, âm nhạc và Discord presence."
+    />
+    <meta name="theme-color" content="#050810" />
+    <title>My Profile</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="config.js"></script>
+    <script src="script.js" defer></script>
+  </head>
+  <body class="is-locked">
+    <a class="skip-link" href="#profile">Đi tới nội dung chính</a>
+
+    <div class="scene" aria-hidden="true">
+      <div class="scene__image" id="sceneImage"></div>
+      <canvas class="scene__particles" id="particles"></canvas>
+      <div class="scene__aurora"></div>
+      <div class="scene__vignette"></div>
+      <div class="scene__grain"></div>
+    </div>
+
+    <button class="entry" id="entryScreen" type="button" aria-label="Mở profile">
+      <span class="entry__halo" aria-hidden="true"></span>
+      <span class="entry__mark" aria-hidden="true">!</span>
+      <span class="entry__label">CHẠM ĐỂ VÀO</span>
+    </button>
+
+    <header class="utility-bar" aria-label="Điều khiển nhanh">
+      <button class="icon-button" id="soundToggle" type="button" aria-label="Bật âm thanh">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M11 5 6.8 8.4H3.5A1.5 1.5 0 0 0 2 9.9v4.2a1.5 1.5 0 0 0 1.5 1.5h3.3L11 19V5Z" />
+          <path class="sound-wave" d="M15 8.2a5.4 5.4 0 0 1 0 7.6M18 5.4a9.3 9.3 0 0 1 0 13.2" />
+        </svg>
+      </button>
+
+      <button class="icon-button" id="shareButton" type="button" aria-label="Sao chép liên kết profile">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="18" cy="5" r="2.5" />
+          <circle cx="6" cy="12" r="2.5" />
+          <circle cx="18" cy="19" r="2.5" />
+          <path d="m8.2 10.8 7.6-4.5M8.2 13.2l7.6 4.5" />
+        </svg>
+      </button>
+    </header>
+
+    <main class="profile-shell" id="profile">
+      <article class="profile-card" id="profileCard">
+        <div class="profile-card__shine" aria-hidden="true"></div>
+
+        <section class="identity">
+          <div class="avatar-wrap">
+            <div class="avatar-ring" aria-hidden="true"></div>
+            <div class="avatar-glow" aria-hidden="true"></div>
+            <div class="avatar" id="avatarBox">
+              <img id="avatarImage" alt="" hidden />
+              <span id="avatarMonogram" aria-hidden="true">YN</span>
+            </div>
+            <span class="presence-dot" id="presenceDot" aria-label="Trạng thái"></span>
+          </div>
+
+          <div class="identity__copy">
+            <div class="identity__topline">
+              <p class="eyebrow" id="handle">@yourname</p>
+              <span class="pill" id="statusPill">ONLINE</span>
+            </div>
+            <h1 class="display-name" id="displayName">YOUR NAME</h1>
+            <p class="bio" id="bio" aria-live="polite"></p>
+          </div>
+        </section>
+
+        <nav class="social-links" id="socialLinks" aria-label="Liên kết cá nhân"></nav>
+
+        <section class="discord-card" id="discordCard" aria-label="Discord presence">
+          <div class="discord-avatar">
+            <img id="discordAvatar" alt="Avatar Discord" hidden />
+            <span id="discordMonogram" aria-hidden="true">YN</span>
+            <span class="discord-status" id="discordStatusDot"></span>
+          </div>
+          <div class="discord-copy">
+            <div class="discord-heading">
+              <strong id="discordName">yourname</strong>
+              <span class="discord-label">DISCORD</span>
+            </div>
+            <p id="discordActivity">Đang thư giãn trong thế giới riêng.</p>
+          </div>
+          <a class="discord-open" id="discordLink" href="#" target="_blank" rel="noopener noreferrer">
+            Mở hồ sơ
+            <span aria-hidden="true">↗</span>
+          </a>
+        </section>
+
+        <section class="music-player" aria-label="Trình phát nhạc">
+          <button class="play-button" id="playButton" type="button" aria-label="Phát nhạc">
+            <span class="play-icon" aria-hidden="true"></span>
+          </button>
+          <div class="track-copy">
+            <span class="track-kicker">NOW PLAYING</span>
+            <strong id="trackTitle">Thêm file music.mp3</strong>
+            <span id="trackArtist">Nhạc nền của bạn</span>
+          </div>
+          <div class="track-progress">
+            <span id="currentTime">0:00</span>
+            <input id="progress" type="range" min="0" max="100" value="0" aria-label="Tiến trình bài nhạc" />
+            <span id="duration">0:00</span>
+          </div>
+          <p class="current-lyric" id="currentLyric" aria-live="polite">
+            Lời bài hát sẽ hiển thị tại đây.
+          </p>
+        </section>
+
+        <footer class="profile-meta">
+          <span title="Lượt mở được lưu trên thiết bị này">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" /><circle cx="12" cy="12" r="2.7" /></svg>
+            <span id="viewCount">001</span>
+          </span>
+          <span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z" /><circle cx="12" cy="10" r="2" /></svg>
+            <span id="location">Việt Nam</span>
+          </span>
+          <time id="localTime">00:00</time>
+        </footer>
+      </article>
+    </main>
+
+    <div class="cursor-dot" id="cursorDot" aria-hidden="true"></div>
+    <div class="cursor-ring" id="cursorRing" aria-hidden="true"></div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <audio id="audio" preload="metadata"></audio>
+  </body>
+</html>
