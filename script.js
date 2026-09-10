@@ -269,6 +269,8 @@
     let isChangingTrack = false;
     let isPlaying = false;
     let soundCloudWidget = null;
+    let trackRevision = 0;
+    const noLyricsText = "Chưa có lời bài hát.";
 
     elements.playButton.disabled = !hasAudio;
     elements.previousTrack.disabled = tracks.length <= 1;
@@ -303,6 +305,14 @@
     };
 
     const updateLyrics = (position = playbackPosition) => {
+      // A track without its own lyric data must never inherit text left by the
+      // previously active track, including during delayed SoundCloud events.
+      if (!activeLyrics.length) {
+        activeLyricIndex = -1;
+        elements.currentLyric.textContent = noLyricsText;
+        return;
+      }
+
       let nextIndex = -1;
       for (let index = 0; index < activeLyrics.length; index += 1) {
         if (activeLyrics[index].time > position) break;
@@ -378,11 +388,15 @@
       updateProgress();
     };
 
-    const handleSoundCloudReady = () => {
-      if (!soundCloudWidget || activeTrack?.provider !== "soundcloud") return;
+    const handleSoundCloudReady = (revision = trackRevision) => {
+      if (
+        revision !== trackRevision
+        || !soundCloudWidget
+        || activeTrack?.provider !== "soundcloud"
+      ) return;
 
       soundCloudWidget.getDuration((durationMs) => {
-        if (activeTrack?.provider !== "soundcloud") return;
+        if (revision !== trackRevision || activeTrack?.provider !== "soundcloud") return;
         const duration = Number(durationMs) / 1000;
         if (!Number.isFinite(duration) || duration <= 0) {
           isChangingTrack = false;
@@ -401,7 +415,7 @@
       });
     };
 
-    const initializeSoundCloud = () => {
+    const initializeSoundCloud = (revision) => {
       if (!window.SC?.Widget) {
         isChangingTrack = false;
         playAfterLoad = false;
@@ -418,7 +432,7 @@
         show_artwork: false,
         show_playcount: false,
         show_user: false,
-        callback: handleSoundCloudReady
+        callback: () => handleSoundCloudReady(revision)
       };
 
       if (!soundCloudWidget) {
@@ -436,7 +450,7 @@
         soundCloudWidget = window.SC.Widget(elements.soundcloudPlayer);
         const events = window.SC.Widget.Events;
 
-        soundCloudWidget.bind(events.READY, handleSoundCloudReady);
+        soundCloudWidget.bind(events.READY, () => handleSoundCloudReady(trackRevision));
         soundCloudWidget.bind(events.PLAY_PROGRESS, (event) => {
           if (activeTrack?.provider !== "soundcloud" || isChangingTrack) return;
           playbackPosition = Number(event?.currentPosition) / 1000;
@@ -481,6 +495,7 @@
     loadTrack = (index, shouldPlay = false) => {
       const normalizedIndex = (index + tracks.length) % tracks.length;
       pausePlayers();
+      trackRevision += 1;
       activeTrackIndex = normalizedIndex;
       activeTrack = tracks[activeTrackIndex];
       activeLyrics = activeTrack.lyrics;
@@ -496,7 +511,7 @@
       elements.trackPosition.textContent = `${activeTrackIndex + 1} / ${tracks.length}`;
       elements.currentTime.textContent = formatTime(segmentStart);
       elements.duration.textContent = activeTrack.endAt === null ? "0:00" : formatTime(activeTrack.endAt);
-      elements.currentLyric.textContent = activeLyrics.length ? "♪" : "Chưa có lời bài hát.";
+      elements.currentLyric.textContent = activeLyrics.length ? "♪" : noLyricsText;
       elements.playButton.disabled = false;
       elements.soundcloudSource.hidden = activeTrack.provider !== "soundcloud";
       elements.soundcloudSource.href = activeTrack.provider === "soundcloud" ? activeTrack.source : "#";
@@ -506,7 +521,7 @@
       if (activeTrack.provider === "soundcloud") {
         elements.audio.removeAttribute("src");
         elements.audio.load();
-        initializeSoundCloud();
+        initializeSoundCloud(trackRevision);
       } else {
         elements.audio.src = activeTrack.source;
         elements.audio.load();
