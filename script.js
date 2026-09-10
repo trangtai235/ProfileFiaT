@@ -277,7 +277,7 @@
       const ratio = Number.isFinite(segmentDuration) && segmentDuration > 0
         ? ((elements.audio.currentTime - segmentStart) / segmentDuration) * 100
         : 0;
-      elements.progress.value = ratio;
+      elements.progress.setAttribute("aria-valuenow", String(Math.round(Math.min(100, Math.max(0, ratio)))));
       elements.progress.style.setProperty("--progress", `${Math.min(100, Math.max(0, ratio))}%`);
       elements.currentTime.textContent = formatTime(elements.audio.currentTime);
     });
@@ -302,11 +302,6 @@
       showToast("Không đọc được file nhạc. Kiểm tra lại đường dẫn trong config.js.");
     });
 
-    elements.progress.addEventListener("input", () => {
-      const segmentDuration = segmentEnd - segmentStart;
-      if (!Number.isFinite(segmentDuration) || segmentDuration <= 0) return;
-      elements.audio.currentTime = segmentStart + (Number(elements.progress.value) / 100) * segmentDuration;
-    });
   }
 
   async function toggleAudio() {

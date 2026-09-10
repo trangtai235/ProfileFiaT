@@ -23,6 +23,8 @@ window.PROFILE_CONFIG = {
   },
 
   audio: {
+    // Chỉ quản trị viên có quyền sửa repository mới thay đổi các giá trị trong mục audio.
+    // Trang công khai chỉ hiển thị trình phát, tiến trình và lời bài hát.
     src: "assets/12345.mp3", // Chép file nhạc hợp lệ vào đúng đường dẫn này
     title: "12345",
     artist: "GAZ",

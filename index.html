@@ -105,7 +105,15 @@
           </div>
           <div class="track-progress">
             <span id="currentTime">0:00</span>
-            <input id="progress" type="range" min="0" max="100" value="0" aria-label="Tiến trình bài nhạc" />
+            <div
+              class="progress-meter"
+              id="progress"
+              role="progressbar"
+              aria-label="Tiến trình bài nhạc"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="0"
+            ></div>
             <span id="duration">0:00</span>
           </div>
           <p class="current-lyric" id="currentLyric" aria-live="polite">
