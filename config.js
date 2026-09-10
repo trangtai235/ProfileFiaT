@@ -121,6 +121,16 @@ window.PROFILE_CONFIG = {
           { time: 197.16, text: "Mah bad." },
         ],
       },
+      {
+        provider: "soundcloud",
+        url: "https://soundcloud.com/ki-u-duy-t/hen_ho_nhung_khong_iu",
+        title: "Drill Mix 2026 — Hẹn hò nhưng không iu",
+        artist: "Kiều Đạt",
+        startAt: 0,
+        endAt: null,
+        loopSegment: false,
+        lyrics: [],
+      },
     ],
   },
 
