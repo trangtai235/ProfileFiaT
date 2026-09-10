@@ -30,6 +30,9 @@
     duration: $("#duration"),
     trackTitle: $("#trackTitle"),
     trackArtist: $("#trackArtist"),
+    previousTrack: $("#previousTrack"),
+    nextTrack: $("#nextTrack"),
+    trackPosition: $("#trackPosition"),
     currentLyric: $("#currentLyric"),
     toast: $("#toast"),
     presenceDot: $("#presenceDot"),
@@ -114,49 +117,7 @@
 
     renderSocials();
     setupAudio();
-    setupLyrics();
     applyDiscordFallback();
-  }
-
-  function setupLyrics() {
-    const audioConfig = config.audio || {};
-    const lyrics = Array.isArray(audioConfig.lyrics)
-      ? audioConfig.lyrics
-        .map((line) => ({
-          time: Number(line?.time),
-          text: safeText(line?.text)
-        }))
-        .filter((line) => Number.isFinite(line.time) && line.time >= 0 && line.text)
-        .sort((a, b) => a.time - b.time)
-      : [];
-
-    if (!lyrics.length) {
-      elements.currentLyric.textContent = "Chưa có lời bài hát.";
-      return;
-    }
-
-    let activeIndex = -1;
-    elements.audio.addEventListener("timeupdate", () => {
-      let nextIndex = -1;
-      for (let index = 0; index < lyrics.length; index += 1) {
-        if (lyrics[index].time > elements.audio.currentTime) break;
-        nextIndex = index;
-      }
-      if (nextIndex === activeIndex) return;
-
-      activeIndex = nextIndex;
-      elements.currentLyric.textContent = activeIndex >= 0 ? lyrics[activeIndex].text : "♪";
-
-      if (!reduceMotion) {
-        elements.currentLyric.animate(
-          [
-            { opacity: 0, transform: "translateY(5px)" },
-            { opacity: 1, transform: "translateY(0)" }
-          ],
-          { duration: 260, easing: "ease-out" }
-        );
-      }
-    });
   }
 
   function renderSocials() {
@@ -231,55 +192,191 @@
 
   function setupAudio() {
     const audioConfig = config.audio || {};
-    const src = safeUrl(audioConfig.src);
-    const hasAudio = Boolean(src);
+    const legacyTrack = {
+      src: audioConfig.src,
+      title: audioConfig.title,
+      artist: audioConfig.artist,
+      startAt: audioConfig.startAt,
+      endAt: audioConfig.endAt,
+      loopSegment: audioConfig.loopSegment,
+      lyrics: audioConfig.lyrics
+    };
+    const configuredTracks = Array.isArray(audioConfig.tracks) && audioConfig.tracks.length
+      ? audioConfig.tracks
+      : [legacyTrack];
+    const tracks = configuredTracks
+      .map((track, index) => {
+        const src = safeUrl(track?.src);
+        if (!src) return null;
 
-    elements.trackTitle.textContent = hasAudio
-      ? safeText(audioConfig.title, "Nhạc nền")
-      : "Thêm nhạc trong config.js";
-    elements.trackArtist.textContent = hasAudio
-      ? safeText(audioConfig.artist, "Unknown artist")
-      : "Mở config.js để kích hoạt";
+        const startAt = Number(track?.startAt);
+        const endAt = track?.endAt === null || track?.endAt === "" || track?.endAt === undefined
+          ? null
+          : Number(track.endAt);
+
+        return {
+          src,
+          title: safeText(track?.title, `Bài hát ${index + 1}`),
+          artist: safeText(track?.artist, "Unknown artist"),
+          startAt: Number.isFinite(startAt) && startAt >= 0 ? startAt : 0,
+          endAt: Number.isFinite(endAt) ? endAt : null,
+          loopSegment: typeof track?.loopSegment === "boolean"
+            ? track.loopSegment
+            : Boolean(audioConfig.loopSegment),
+          lyrics: Array.isArray(track?.lyrics)
+            ? track.lyrics
+              .map((line) => ({
+                time: Number(line?.time),
+                text: safeText(line?.text)
+              }))
+              .filter((line) => Number.isFinite(line.time) && line.time >= 0 && line.text)
+              .sort((a, b) => a.time - b.time)
+            : []
+        };
+      })
+      .filter(Boolean);
+
+    const hasAudio = tracks.length > 0;
+    const volume = Number(audioConfig.volume);
+    const autoAdvance = audioConfig.autoAdvance !== false;
+    const loopPlaylist = audioConfig.loopPlaylist !== false;
+    let activeTrackIndex = Math.min(
+      tracks.length - 1,
+      Math.max(0, Number.isInteger(audioConfig.defaultTrack) ? audioConfig.defaultTrack : 0)
+    );
+    let activeTrack = null;
+    let activeLyrics = [];
+    let activeLyricIndex = -1;
+    let segmentStart = 0;
+    let segmentEnd = Infinity;
+    let playAfterLoad = false;
+    let isChangingTrack = false;
+
     elements.playButton.disabled = !hasAudio;
+    elements.previousTrack.disabled = tracks.length <= 1;
+    elements.nextTrack.disabled = tracks.length <= 1;
     elements.soundToggle.classList.toggle("is-muted", !hasAudio);
 
-    if (!hasAudio) return;
+    if (!hasAudio) {
+      elements.trackTitle.textContent = "Thêm nhạc trong config.js";
+      elements.trackArtist.textContent = "Mở config.js để kích hoạt";
+      elements.trackPosition.textContent = "0 / 0";
+      elements.currentLyric.textContent = "Chưa có lời bài hát.";
+      return;
+    }
 
-    elements.audio.src = src;
-    const volume = Number(audioConfig.volume);
-    const configuredStart = Number(audioConfig.startAt);
-    const configuredEnd = Number(audioConfig.endAt);
-    let segmentStart = Number.isFinite(configuredStart) && configuredStart >= 0 ? configuredStart : 0;
-    let segmentEnd = Infinity;
     elements.audio.volume = Number.isFinite(volume) ? Math.min(1, Math.max(0, volume)) : 0.55;
 
-    elements.audio.addEventListener("loadedmetadata", () => {
-      segmentStart = Math.min(segmentStart, Math.max(0, elements.audio.duration - 0.01));
-      segmentEnd = Number.isFinite(configuredEnd) && configuredEnd > segmentStart
-        ? Math.min(configuredEnd, elements.audio.duration)
-        : elements.audio.duration;
-      elements.audio.currentTime = segmentStart;
-      elements.currentTime.textContent = formatTime(segmentStart);
-      elements.duration.textContent = formatTime(segmentEnd);
-    });
-
-    elements.audio.addEventListener("timeupdate", () => {
-      if (elements.audio.currentTime >= segmentEnd) {
-        if (audioConfig.loopSegment) {
-          elements.audio.currentTime = segmentStart;
-        } else {
-          elements.audio.pause();
-          elements.audio.currentTime = segmentEnd;
-        }
-      }
-
+    const updateProgress = () => {
       const segmentDuration = segmentEnd - segmentStart;
       const ratio = Number.isFinite(segmentDuration) && segmentDuration > 0
         ? ((elements.audio.currentTime - segmentStart) / segmentDuration) * 100
         : 0;
-      elements.progress.setAttribute("aria-valuenow", String(Math.round(Math.min(100, Math.max(0, ratio)))));
-      elements.progress.style.setProperty("--progress", `${Math.min(100, Math.max(0, ratio))}%`);
+      const safeRatio = Math.min(100, Math.max(0, ratio));
+      elements.progress.setAttribute("aria-valuenow", String(Math.round(safeRatio)));
+      elements.progress.style.setProperty("--progress", `${safeRatio}%`);
       elements.currentTime.textContent = formatTime(elements.audio.currentTime);
+    };
+
+    const updateLyrics = () => {
+      let nextIndex = -1;
+      for (let index = 0; index < activeLyrics.length; index += 1) {
+        if (activeLyrics[index].time > elements.audio.currentTime) break;
+        nextIndex = index;
+      }
+      if (nextIndex === activeLyricIndex) return;
+
+      activeLyricIndex = nextIndex;
+      elements.currentLyric.textContent = activeLyricIndex >= 0
+        ? activeLyrics[activeLyricIndex].text
+        : "♪";
+
+      if (!reduceMotion) {
+        elements.currentLyric.animate(
+          [
+            { opacity: 0, transform: "translateY(5px)" },
+            { opacity: 1, transform: "translateY(0)" }
+          ],
+          { duration: 260, easing: "ease-out" }
+        );
+      }
+    };
+
+    const loadTrack = (index, shouldPlay = false) => {
+      const normalizedIndex = (index + tracks.length) % tracks.length;
+      activeTrackIndex = normalizedIndex;
+      activeTrack = tracks[activeTrackIndex];
+      activeLyrics = activeTrack.lyrics;
+      activeLyricIndex = -1;
+      segmentStart = activeTrack.startAt;
+      segmentEnd = Infinity;
+      playAfterLoad = shouldPlay;
+      isChangingTrack = true;
+
+      elements.audio.pause();
+      elements.trackTitle.textContent = activeTrack.title;
+      elements.trackArtist.textContent = activeTrack.artist;
+      elements.trackPosition.textContent = `${activeTrackIndex + 1} / ${tracks.length}`;
+      elements.currentTime.textContent = formatTime(segmentStart);
+      elements.duration.textContent = activeTrack.endAt === null ? "0:00" : formatTime(activeTrack.endAt);
+      elements.currentLyric.textContent = activeLyrics.length ? "♪" : "Chưa có lời bài hát.";
+      elements.playButton.disabled = false;
+      elements.progress.setAttribute("aria-valuenow", "0");
+      elements.progress.style.setProperty("--progress", "0%");
+      elements.audio.src = activeTrack.src;
+      elements.audio.load();
+    };
+
+    const finishTrack = () => {
+      if (isChangingTrack || !activeTrack) return;
+
+      if (activeTrack.loopSegment) {
+        elements.audio.currentTime = segmentStart;
+        elements.audio.play().catch(syncAudioButtons);
+        return;
+      }
+
+      const hasNextTrack = activeTrackIndex < tracks.length - 1;
+      if (autoAdvance && (hasNextTrack || loopPlaylist)) {
+        loadTrack(activeTrackIndex + 1, true);
+        return;
+      }
+
+      elements.audio.pause();
+      elements.audio.currentTime = segmentEnd;
+      updateProgress();
+      syncAudioButtons();
+    };
+
+    elements.audio.addEventListener("loadedmetadata", () => {
+      segmentStart = Math.min(activeTrack.startAt, Math.max(0, elements.audio.duration - 0.01));
+      segmentEnd = activeTrack.endAt !== null && activeTrack.endAt > segmentStart
+        ? Math.min(activeTrack.endAt, elements.audio.duration)
+        : elements.audio.duration;
+      elements.audio.currentTime = segmentStart;
+      elements.currentTime.textContent = formatTime(segmentStart);
+      elements.duration.textContent = formatTime(segmentEnd);
+      isChangingTrack = false;
+      updateLyrics();
+
+      if (playAfterLoad) {
+        playAfterLoad = false;
+        elements.audio.play().catch(syncAudioButtons);
+      }
+    });
+
+    elements.audio.addEventListener("timeupdate", () => {
+      if (isChangingTrack) return;
+      if (elements.audio.currentTime + 0.25 < segmentStart) {
+        elements.audio.currentTime = segmentStart;
+        return;
+      }
+      if (elements.audio.currentTime >= segmentEnd) {
+        finishTrack();
+        return;
+      }
+      updateProgress();
+      updateLyrics();
     });
 
     elements.audio.addEventListener("play", () => {
@@ -289,19 +386,22 @@
       syncAudioButtons();
     });
     elements.audio.addEventListener("pause", syncAudioButtons);
-    elements.audio.addEventListener("ended", () => {
-      if (audioConfig.loopSegment) {
-        elements.audio.currentTime = segmentStart;
-        elements.audio.play().catch(syncAudioButtons);
-      } else {
-        syncAudioButtons();
-      }
-    });
+    elements.audio.addEventListener("ended", finishTrack);
     elements.audio.addEventListener("error", () => {
+      isChangingTrack = false;
+      playAfterLoad = false;
       elements.playButton.disabled = true;
-      showToast("Không đọc được file nhạc. Kiểm tra lại đường dẫn trong config.js.");
+      showToast(`Không đọc được ${activeTrack?.title || "file nhạc"}.`);
     });
 
+    elements.previousTrack.addEventListener("click", () => {
+      loadTrack(activeTrackIndex - 1, !elements.audio.paused);
+    });
+    elements.nextTrack.addEventListener("click", () => {
+      loadTrack(activeTrackIndex + 1, !elements.audio.paused);
+    });
+
+    loadTrack(activeTrackIndex);
   }
 
   async function toggleAudio() {
