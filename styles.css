@@ -146,11 +146,11 @@ input:focus-visible {
 
 .entry__halo {
   position: absolute;
-  width: 116px;
-  height: 116px;
+  width: 138px;
+  height: 138px;
   border: 1px solid color-mix(in srgb, var(--accent) 42%, transparent);
   border-radius: 50%;
-  box-shadow: 0 0 55px color-mix(in srgb, var(--accent) 24%, transparent);
+  box-shadow: 0 0 72px color-mix(in srgb, var(--accent) 28%, transparent);
   animation: halo 2.2s ease-out infinite;
 }
 
@@ -159,15 +159,95 @@ input:focus-visible {
   z-index: 1;
   display: grid;
   place-items: center;
-  width: 76px;
-  height: 76px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  width: 92px;
+  height: 92px;
+  border: 1px solid color-mix(in srgb, var(--accent) 46%, rgba(255, 255, 255, 0.14));
   border-radius: 50%;
-  font-size: 2.1rem;
-  font-weight: 800;
-  line-height: 1;
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 1px rgba(255, 255, 255, 0.16), 0 20px 70px rgba(0, 0, 0, 0.48);
+  background:
+    radial-gradient(circle at 34% 26%, rgba(255, 255, 255, 0.17), transparent 30%),
+    linear-gradient(145deg, rgba(117, 239, 255, 0.12), rgba(183, 146, 255, 0.08)),
+    rgba(5, 11, 22, 0.72);
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, 0.2),
+    inset 0 -16px 30px rgba(1, 4, 12, 0.3),
+    0 0 34px color-mix(in srgb, var(--accent) 22%, transparent),
+    0 24px 70px rgba(0, 0, 0, 0.52);
+  isolation: isolate;
+  transition: transform 260ms ease, border-color 260ms ease, box-shadow 260ms ease;
+}
+
+.entry__mark::before {
+  position: absolute;
+  z-index: -1;
+  inset: -9px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--accent);
+  border-right-color: color-mix(in srgb, var(--accent-2) 72%, transparent);
+  border-radius: inherit;
+  content: "";
+  filter: drop-shadow(0 0 7px color-mix(in srgb, var(--accent) 55%, transparent));
+  animation: entry-orbit 5.8s linear infinite;
+}
+
+.entry__mark::after {
+  position: absolute;
+  top: 2px;
+  right: 11px;
+  width: 7px;
+  height: 7px;
+  border: 2px solid #07101c;
+  border-radius: 50%;
+  content: "";
+  background: var(--accent);
+  box-shadow: 0 0 15px var(--accent);
+}
+
+.entry:hover .entry__mark {
+  transform: scale(1.055);
+  border-color: color-mix(in srgb, var(--accent) 76%, white 8%);
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, 0.24),
+    inset 0 -16px 30px rgba(1, 4, 12, 0.28),
+    0 0 50px color-mix(in srgb, var(--accent) 34%, transparent),
+    0 28px 78px rgba(0, 0, 0, 0.56);
+}
+
+.entry__icon {
+  width: 58px;
+  height: 58px;
+  overflow: visible;
+}
+
+.entry__icon-ring {
+  fill: none;
+  stroke: rgba(235, 250, 255, 0.14);
+  stroke-width: 1.5;
+  stroke-dasharray: 18 7;
+  transform-origin: center;
+  animation: entry-ring 8s linear infinite reverse;
+}
+
+.entry__equalizer rect {
+  fill: var(--accent);
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 68%, transparent));
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: entry-equalizer 1.15s ease-in-out infinite alternate;
+}
+
+.entry__equalizer rect:nth-child(2) {
+  fill: color-mix(in srgb, var(--accent) 58%, var(--accent-2));
+  animation-delay: -0.72s;
+}
+
+.entry__equalizer rect:nth-child(3) {
+  fill: color-mix(in srgb, var(--accent) 25%, var(--accent-2));
+  animation-delay: -0.38s;
+}
+
+.entry__equalizer rect:nth-child(4) {
+  fill: var(--accent-2);
+  animation-delay: -0.9s;
 }
 
 .entry__label {
@@ -910,6 +990,19 @@ body.has-entered .utility-bar {
   0% { transform: scale(0.72); opacity: 0; }
   35% { opacity: 0.8; }
   100% { transform: scale(1.35); opacity: 0; }
+}
+
+@keyframes entry-orbit {
+  to { transform: rotate(1turn); }
+}
+
+@keyframes entry-ring {
+  to { transform: rotate(1turn); }
+}
+
+@keyframes entry-equalizer {
+  0% { transform: scaleY(0.48); opacity: 0.72; }
+  100% { transform: scaleY(1.08); opacity: 1; }
 }
 
 @keyframes background-breathe {
