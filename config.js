@@ -116,7 +116,7 @@ window.PROFILE_CONFIG = {
       short: "SP",
       url: "https://open.spotify.com/user/31l7unkcfijdq42z6jmrsyo4l4zm",
     },
-    { label: "GitHub", short: "GH", url: "https://github.com/trangtai235" },
+    { label: "Youtube", short: "YT", url: "https://www.youtube.com/@FiaT_235" },
     { label: "TikTok", short: "TT", url: "https://www.tiktok.com/@tktai235" },
   ],
 };
