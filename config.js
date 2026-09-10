@@ -30,11 +30,11 @@ window.PROFILE_CONFIG = {
 
     // Chỉ tài khoản có quyền ghi repository mới chỉnh được danh sách này.
     // Dán link dạng https://soundcloud.com/ten-nguoi-dang/ten-bai vào url.
-    // Demo đang chia một bài SoundCloud thành 3 mục để thử chuyển đoạn/bài.
+    // Bài 12345 dùng file gốc trong assets và được chia thành 3 đoạn.
     tracks: [
       {
-        provider: "soundcloud",
-        url: "https://soundcloud.com/tr-ng-giang-nh/12345timem",
+        provider: "audio",
+        src: "assets/12345.mp3",
         title: "12345 — Phần 1",
         artist: "GAZ",
         startAt: 80,
@@ -61,8 +61,8 @@ window.PROFILE_CONFIG = {
         ],
       },
       {
-        provider: "soundcloud",
-        url: "https://soundcloud.com/tr-ng-giang-nh/12345timem",
+        provider: "audio",
+        src: "assets/12345.mp3",
         title: "12345 — Phần 2",
         artist: "GAZ",
         startAt: 120,
@@ -93,8 +93,8 @@ window.PROFILE_CONFIG = {
         ],
       },
       {
-        provider: "soundcloud",
-        url: "https://soundcloud.com/tr-ng-giang-nh/12345timem",
+        provider: "audio",
+        src: "assets/12345.mp3",
         title: "12345 — Phần 3",
         artist: "GAZ",
         startAt: 159.5,
