@@ -325,6 +325,7 @@
 
     const loadTrack = (index, shouldPlay = false) => {
       const normalizedIndex = (index + tracks.length) % tracks.length;
+      isChangingTrack = true;
       elements.audio.pause();
       activeTrackIndex = normalizedIndex;
       activeTrack = tracks[activeTrackIndex];
@@ -333,7 +334,6 @@
       segmentStart = activeTrack.startAt;
       segmentEnd = Infinity;
       playAfterLoad = shouldPlay;
-      isChangingTrack = true;
       hasRequestedTrack = false;
 
       elements.trackTitle.textContent = activeTrack.title;
@@ -351,6 +351,9 @@
         elements.audio.load();
         hasRequestedTrack = true;
         setLoading(true);
+        // Preserve the user's playback intent while the new source is loading.
+        // loadedmetadata retries this call after the seek window is available.
+        elements.audio.play().catch(() => {});
       } else {
         elements.audio.preload = "none";
         elements.audio.removeAttribute("src");
