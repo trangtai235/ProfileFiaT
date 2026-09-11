@@ -36,7 +36,7 @@ window.PROFILE_CONFIG = {
         src: "assets/12345.mp3",
         title: "12345",
         artist: "GAZ",
-        startAt: 0,
+        startAt: 80,
         endAt: 205, // Dừng tại 3:25 rồi chuyển sang bài 2
         loopSegment: false,
         lyrics: [
