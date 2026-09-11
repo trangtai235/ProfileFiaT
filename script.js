@@ -252,6 +252,7 @@
     let segmentEnd = Infinity;
     let playAfterLoad = false;
     let isChangingTrack = false;
+    let hasRequestedTrack = false;
 
     elements.playButton.disabled = !hasAudio;
     elements.previousTrack.disabled = tracks.length <= 1;
@@ -271,6 +272,20 @@
 
     const setPlaying = (playing) => {
       syncAudioButtons(Boolean(playing));
+    };
+
+    const setLoading = (loading) => {
+      elements.playButton.classList.toggle("is-loading", loading);
+      elements.playButton.setAttribute("aria-busy", String(Boolean(loading)));
+    };
+
+    const requestTrackLoad = () => {
+      setLoading(true);
+      if (hasRequestedTrack) return;
+      hasRequestedTrack = true;
+      elements.audio.preload = "auto";
+      elements.audio.src = activeTrack.src;
+      elements.audio.load();
     };
 
     const updateProgress = () => {
@@ -319,6 +334,7 @@
       segmentEnd = Infinity;
       playAfterLoad = shouldPlay;
       isChangingTrack = true;
+      hasRequestedTrack = false;
 
       elements.trackTitle.textContent = activeTrack.title;
       elements.trackArtist.textContent = activeTrack.artist;
@@ -329,8 +345,18 @@
       elements.playButton.disabled = false;
       elements.progress.setAttribute("aria-valuenow", "0");
       elements.progress.style.setProperty("--progress", "0%");
-      elements.audio.src = activeTrack.src;
-      elements.audio.load();
+      if (shouldPlay) {
+        elements.audio.preload = "auto";
+        elements.audio.src = activeTrack.src;
+        elements.audio.load();
+        hasRequestedTrack = true;
+        setLoading(true);
+      } else {
+        elements.audio.preload = "none";
+        elements.audio.removeAttribute("src");
+        elements.audio.load();
+        setLoading(false);
+      }
     };
 
     const finishTrack = () => {
@@ -367,7 +393,12 @@
 
       if (playAfterLoad) {
         playAfterLoad = false;
-        elements.audio.play().catch(() => setPlaying(false));
+        if (elements.audio.paused) {
+          elements.audio.play().catch(() => {
+            setLoading(false);
+            setPlaying(false);
+          });
+        }
       }
     });
 
@@ -393,6 +424,13 @@
       }
       setPlaying(true);
     });
+    elements.audio.addEventListener("playing", () => {
+      setLoading(false);
+      setPlaying(true);
+    });
+    elements.audio.addEventListener("waiting", () => {
+      if (!elements.audio.paused) setLoading(true);
+    });
     elements.audio.addEventListener("pause", () => {
       if (!isChangingTrack) setPlaying(false);
     });
@@ -400,6 +438,7 @@
     elements.audio.addEventListener("error", () => {
       isChangingTrack = false;
       playAfterLoad = false;
+      setLoading(false);
       elements.playButton.disabled = true;
       setPlaying(false);
       showToast(`Không đọc được ${activeTrack?.title || "file nhạc"}.`);
@@ -415,18 +454,28 @@
     musicController = {
       available: true,
       async play() {
-        if (isChangingTrack) {
-          playAfterLoad = true;
-          return;
+        try {
+          if (isChangingTrack) {
+            playAfterLoad = true;
+            requestTrackLoad();
+            await elements.audio.play();
+            return;
+          }
+          if (elements.audio.currentTime < segmentStart || elements.audio.currentTime >= segmentEnd) {
+            elements.audio.currentTime = segmentStart;
+          }
+          await elements.audio.play();
+        } catch (error) {
+          playAfterLoad = false;
+          setLoading(false);
+          setPlaying(false);
+          throw error;
         }
-        if (elements.audio.currentTime < segmentStart || elements.audio.currentTime >= segmentEnd) {
-          elements.audio.currentTime = segmentStart;
-        }
-        await elements.audio.play();
       },
       pause() {
         playAfterLoad = false;
         elements.audio.pause();
+        setLoading(false);
         setPlaying(false);
       },
       async toggle() {

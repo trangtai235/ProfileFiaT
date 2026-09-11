@@ -644,6 +644,16 @@ body.has-entered .entry {
   border-left: 4px solid currentColor;
 }
 
+.play-button.is-loading .play-icon {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  border: 2px solid rgba(6, 16, 24, 0.28);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
 .track-copy {
   display: grid;
   min-width: 0;
