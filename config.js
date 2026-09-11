@@ -136,7 +136,7 @@ window.PROFILE_CONFIG = {
   discord: {
     id: "538914065662083072", // Discord User ID, chỉ gồm số
     useLanyard: true,
-    useAvatar: true, // Dùng avatar Discord (kể cả GIF) làm avatar chính
+    useAvatar: true, // Dùng avatar Discord (kể cả GIF) làm avatar chínhh
     fallbackName: "FiaT",
     fallbackActivity: "Đang thư giãn trong thế giới riêng.",
   },
