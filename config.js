@@ -34,7 +34,7 @@ window.PROFILE_CONFIG = {
     tracks: [
       {
         src: "assets/12345.mp3",
-        title: "12345 — Phần 1",
+        title: "12345",
         artist: "GAZ",
         startAt: 80,
         endAt: 119.8,
@@ -71,6 +71,15 @@ window.PROFILE_CONFIG = {
       {
         src: "assets/3.mp3",
         title: "Bài 3",
+        artist: "Unknown artist",
+        startAt: 0,
+        endAt: null,
+        loopSegment: false,
+        lyrics: [],
+      },
+      {
+        src: "assets/4.mp3",
+        title: "Bài 4",
         artist: "Unknown artist",
         startAt: 0,
         endAt: null,
