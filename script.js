@@ -71,14 +71,22 @@
     }, 2400);
   };
 
-  const showImage = (image, fallback, src, alt) => {
+  const showImage = (image, fallback, src, alt, fallbackSrc = null) => {
     if (!image || !src) return;
+
+    let recoverySrc = safeUrl(fallbackSrc);
 
     image.onload = () => {
       image.hidden = false;
       if (fallback) fallback.hidden = true;
     };
     image.onerror = () => {
+      if (recoverySrc && image.src !== recoverySrc) {
+        const nextSrc = recoverySrc;
+        recoverySrc = null;
+        image.src = nextSrc;
+        return;
+      }
       image.hidden = true;
       if (fallback) fallback.hidden = false;
     };
@@ -541,10 +549,23 @@
       if (user.id && user.avatar) {
         const extension = user.avatar.startsWith("a_") ? "gif" : "png";
         const avatarUrl = `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${extension}?size=256`;
-        showImage(elements.discordAvatar, elements.discordMonogram, avatarUrl, `Avatar Discord của ${name}`);
+        const fallbackAvatar = safeUrl(config.avatar);
+        showImage(
+          elements.discordAvatar,
+          elements.discordMonogram,
+          avatarUrl,
+          `Avatar Discord của ${name}`,
+          fallbackAvatar
+        );
 
         if (config.discord.useAvatar) {
-          showImage(elements.avatarImage, elements.avatarMonogram, avatarUrl, `Avatar của ${name}`);
+          showImage(
+            elements.avatarImage,
+            elements.avatarMonogram,
+            avatarUrl,
+            `Avatar của ${name}`,
+            fallbackAvatar
+          );
         }
       }
 
