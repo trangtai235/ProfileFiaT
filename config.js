@@ -37,7 +37,7 @@ window.PROFILE_CONFIG = {
         title: "12345",
         artist: "GAZ",
         startAt: 0,
-        endAt: null,
+        endAt: 205, // Dừng tại 3:25 rồi chuyển sang bài 2
         loopSegment: false,
         lyrics: [
           { time: 77.8, text: "Anh chỉ muốn gặp lại em ở trên đường." },
